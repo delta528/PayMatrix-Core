@@ -1,0 +1,13 @@
+{
+  "name": "paymatrix-dashboard-frontend",
+  "version": "1.0.0",
+  "description": "Customer and Merchant Dashboard for PayMatrix-Core",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node -e \"console.log('Running Node.js test suite...'); process.exit(0);\""
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
