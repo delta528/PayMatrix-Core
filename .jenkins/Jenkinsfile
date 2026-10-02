@@ -23,28 +23,28 @@ pipeline {
                 stage('Java Tests') {
                     steps {
                         dir('apps/java-backend') {
-                            sh './mvnw clean test || mvn test'
+                            bat './mvnw clean test || mvn test'
                         }
                     }
                 }
                 stage('Go Tests') {
                     steps {
                         dir('apps/go-microservice') {
-                            sh 'go test -v ./...'
+                            bat 'go test -v ./...'
                         }
                     }
                 }
                 stage('Node.js Tests') {
                     steps {
                         dir('apps/node-frontend') {
-                            sh 'npm test'
+                            bat 'npm test'
                         }
                     }
                 }
                 stage('Python Tests') {
                     steps {
                         dir('apps/python-analytics') {
-                            sh 'pytest'
+                            bat 'pytest'
                         }
                     }
                 }
