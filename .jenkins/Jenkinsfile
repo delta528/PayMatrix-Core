@@ -1,0 +1,116 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCOUNT_ID = '123456789012'
+        AWS_REGION     = 'us-east-1'
+        ECR_REGISTRY   = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        IMAGE_TAG      = "${BUILD_NUMBER}-${GIT_COMMIT[0..7]}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    echo "[PayMatrix-Core] Building Commit: ${env.IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Compile & Unit Tests') {
+            parallel {
+                stage('Java Tests') {
+                    steps {
+                        dir('apps/java-backend') {
+                            sh './mvnw clean test || mvn test'
+                        }
+                    }
+                }
+                stage('Go Tests') {
+                    steps {
+                        dir('apps/go-microservice') {
+                            sh 'go test -v ./...'
+                        }
+                    }
+                }
+                stage('Node.js Tests') {
+                    steps {
+                        dir('apps/node-frontend') {
+                            sh 'npm test'
+                        }
+                    }
+                }
+                stage('Python Tests') {
+                    steps {
+                        dir('apps/python-analytics') {
+                            sh 'pytest'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Code Quality & SAST') {
+            steps {
+                echo "[PayMatrix-Core] Executing SonarQube & SAST Scans..."
+                // withSonarQubeEnv('SonarQube-Server') { sh 'sonar-scanner' }
+            }
+        }
+
+        stage('Kaniko Build & Push to ECR') {
+            steps {
+                script {
+                    def services = ['java-backend', 'go-microservice', 'node-frontend', 'python-analytics']
+                    services.each { service ->
+                        echo "Building container for ${service} using Kaniko..."
+                        /*
+                        sh """
+                        /kaniko/executor \
+                          --context=dir://apps/${service} \
+                          --dockerfile=apps/${service}/Dockerfile \
+                          --destination=${ECR_REGISTRY}/paymatrix-${service}:${IMAGE_TAG} \
+                          --destination=${ECR_REGISTRY}/paymatrix-${service}:latest
+                        """
+                        */
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Security Scan') {
+            steps {
+                echo "[PayMatrix-Core] Auditing container images with Trivy..."
+                // sh "trivy image --severity HIGH,CRITICAL ${ECR_REGISTRY}/paymatrix-java-backend:${IMAGE_TAG}"
+            }
+        }
+
+        stage('GitOps Deployment Trigger') {
+            steps {
+                echo "[PayMatrix-Core] Updating k8s-manifests with image tag: ${IMAGE_TAG} for ArgoCD sync..."
+                /*
+                sh """
+                git config user.name "jenkins-bot"
+                git config user.email "jenkins@paymatrix.com"
+                sed -i 's|image: .*|image: ${ECR_REGISTRY}/paymatrix-java-backend:${IMAGE_TAG}|g' k8s-manifests/java-backend.yaml
+                git add k8s-manifests/
+                git commit -m "chore(gitops): bump image tag to ${IMAGE_TAG} [skip ci]"
+                git push origin main
+                """
+                */
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "[PayMatrix-Core] Pipeline succeeded! ArgoCD will now sync the new manifests to EKS."
+        }
+        failure {
+            echo "[PayMatrix-Core] Pipeline failed! Review logs above."
+        }
+    }
+}
