@@ -1,6 +1,6 @@
 # PayMatrix-Core 💳
 
-An enterprise-grade, polyglot cloud-native platform designed for modern high-concurrency financial operations.
+An enterprise-grade project, polyglot cloud-native platform designed for modern high-concurrency financial operations.
 
 ## Architecture & Microservices
 
