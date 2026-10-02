@@ -13,7 +13,7 @@ An enterprise-grade, polyglot cloud-native platform designed for modern high-con
 
 ## CI/CD Pipeline Workflow
 
-`GitHub` ➔ `Webhook` ➔ `Jenkins` ➔ `SonarQube & SCA` ➔ `Kaniko Build` ➔ `Trivy Scan` ➔ `AWS ECR` ➔ `ArgoCD / EKS`
+`GitHub` ➔ `Webhook` ➔ `Jenkins` ➔ `Checkout` ➔ `Compile` ➔ `Unit Tests` ➔ `Code Quality / SonarQube` ➔ `SAST / SCA` ➔ `Maven Package` ➔ `Kaniko Build` ➔ `Trivy Scan` ➔ `Push Image to ECR` ➔ `ArgoCD / EKS` ➔ `Smoke Tests` ➔ `Integration Tests` ➔ `Approval` ➔ `Production` ➔ `Health Checks` ➔ `Monitoring` ➔ `Rollback if required`
 
 ---
 *Created as part of the PayMatrix-Core enterprise platform setup.*
