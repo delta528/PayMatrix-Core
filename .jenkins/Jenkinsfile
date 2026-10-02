@@ -23,7 +23,7 @@ pipeline {
                 stage('Java Tests') {
                     steps {
                         dir('apps/java-backend') {
-                            bat './mvnw clean test || mvn test'
+                            bat 'mvnw.cmd clean test'
                         }
                     }
                 }
