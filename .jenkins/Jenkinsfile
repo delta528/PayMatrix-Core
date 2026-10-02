@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    tools {
+        jdk 'JDK21'
+        maven 'Maven3'
+
+    }
+
     environment {
         AWS_ACCOUNT_ID = '123456789012'
         AWS_REGION     = 'us-east-1'
@@ -23,7 +29,7 @@ pipeline {
                 stage('Java Tests') {
                     steps {
                         dir('apps/java-backend') {
-                            bat 'mvnw.cmd clean test'
+                            bat 'mvn clean test'
                         }
                     }
                 }
