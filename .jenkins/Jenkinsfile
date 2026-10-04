@@ -59,9 +59,10 @@ pipeline {
             steps {
                 echo "[PayMatrix-Core] Executing SonarQube Analysis..."
                 dir('apps/java-backend') {
-                    // Uses the SonarQube Server configured under Manage Jenkins -> System
-                    withSonarQubeEnv('SonarQube') {
-                        bat 'mvn sonar:sonar'
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                        withSonarQubeEnv('SonarQube') {
+                            bat "mvn sonar:sonar -Dsonar.host.url=http://127.0.0.1:9000 -Dsonar.token=%SONAR_TOKEN%"
+                        }
                     }
                 }
             }
