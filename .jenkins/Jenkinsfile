@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven3'
-    }
-
     environment {
         AWS_ACCOUNT_ID = '123456789012'
         AWS_REGION     = 'us-east-1'
@@ -17,7 +13,7 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    echo "[PayMatrix-Core] Building Commit: ${env.IMAGE_TAG}"
+                    echo "[PayMatrix] Starting Build #${env.IMAGE_TAG}"
                 }
             }
         }
@@ -25,6 +21,9 @@ pipeline {
         stage('Compile & Unit Tests') {
             parallel {
                 stage('Java Tests') {
+                    when {
+                        changeset "apps/java-backend/**"
+                    }
                     steps {
                         dir('apps/java-backend') {
                             bat 'mvn clean test'
@@ -32,6 +31,9 @@ pipeline {
                     }
                 }
                 stage('Go Tests') {
+                    when {
+                        changeset "apps/go-microservice/**"
+                    }
                     steps {
                         dir('apps/go-microservice') {
                             bat 'go test -v ./...'
@@ -39,6 +41,9 @@ pipeline {
                     }
                 }
                 stage('Node.js Tests') {
+                    when {
+                        changeset "apps/node-frontend/**"
+                    }
                     steps {
                         dir('apps/node-frontend') {
                             bat 'npm test'
@@ -46,6 +51,9 @@ pipeline {
                     }
                 }
                 stage('Python Tests') {
+                    when {
+                        changeset "apps/python-analytics/**"
+                    }
                     steps {
                         dir('apps/python-analytics') {
                             bat 'pytest'
@@ -56,8 +64,11 @@ pipeline {
         }
 
         stage('Code Quality & SAST') {
+            when {
+                changeset "apps/java-backend/**"
+            }
             steps {
-                echo "[PayMatrix-Core] Executing SonarQube Analysis..."
+                echo "[PayMatrix] Executing SonarQube Analysis for Java Backend..."
                 dir('apps/java-backend') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         withSonarQubeEnv('SonarQube') {
@@ -69,33 +80,116 @@ pipeline {
         }
 
         stage('Build Docker Images') {
-            steps {
-                echo "[PayMatrix-Core] Building container image for Java Backend..."
-                dir('apps/java-backend') {
-                    bat "docker build -t paymatrix-java-backend:${env.IMAGE_TAG} ."
+            parallel {
+                stage('Java Backend') {
+                    when {
+                        changeset "apps/java-backend/**"
+                    }
+                    steps {
+                        script {
+                            def exists = bat(script: "docker image inspect paymatrix-java-backend:${env.IMAGE_TAG} >nul 2>&1", returnStatus: true) == 0
+                            if (exists) {
+                                echo "[PayMatrix] Image paymatrix-java-backend:${env.IMAGE_TAG} already exists locally. Skipping build."
+                            } else {
+                                echo "[PayMatrix] Building paymatrix-java-backend:${env.IMAGE_TAG}..."
+                                dir('apps/java-backend') {
+                                    bat "docker build -t paymatrix-java-backend:${env.IMAGE_TAG} ."
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Go Fraud Gateway') {
+                    when {
+                        changeset "apps/go-microservice/**"
+                    }
+                    steps {
+                        script {
+                            def exists = bat(script: "docker image inspect paymatrix-go-fraud:${env.IMAGE_TAG} >nul 2>&1", returnStatus: true) == 0
+                            if (exists) {
+                                echo "[PayMatrix] Image paymatrix-go-fraud:${env.IMAGE_TAG} already exists locally. Skipping build."
+                            } else {
+                                echo "[PayMatrix] Building paymatrix-go-fraud:${env.IMAGE_TAG}..."
+                                dir('apps/go-microservice') {
+                                    bat "docker build -t paymatrix-go-fraud:${env.IMAGE_TAG} ."
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Node Frontend') {
+                    when {
+                        changeset "apps/node-frontend/**"
+                    }
+                    steps {
+                        script {
+                            def exists = bat(script: "docker image inspect paymatrix-node-frontend:${env.IMAGE_TAG} >nul 2>&1", returnStatus: true) == 0
+                            if (exists) {
+                                echo "[PayMatrix] Image paymatrix-node-frontend:${env.IMAGE_TAG} already exists locally. Skipping build."
+                            } else {
+                                echo "[PayMatrix] Building paymatrix-node-frontend:${env.IMAGE_TAG}..."
+                                dir('apps/node-frontend') {
+                                    bat "docker build -t paymatrix-node-frontend:${env.IMAGE_TAG} ."
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Python Analytics') {
+                    when {
+                        changeset "apps/python-analytics/**"
+                    }
+                    steps {
+                        script {
+                            def exists = bat(script: "docker image inspect paymatrix-python-analytics:${env.IMAGE_TAG} >nul 2>&1", returnStatus: true) == 0
+                            if (exists) {
+                                echo "[PayMatrix] Image paymatrix-python-analytics:${env.IMAGE_TAG} already exists locally. Skipping build."
+                            } else {
+                                echo "[PayMatrix] Building paymatrix-python-analytics:${env.IMAGE_TAG}..."
+                                dir('apps/python-analytics') {
+                                    bat "docker build -t paymatrix-python-analytics:${env.IMAGE_TAG} ."
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
         stage('Trivy Security Scan') {
-            steps {
-                echo "[PayMatrix-Core] Auditing container image with Trivy..."
-                bat "trivy image --severity HIGH,CRITICAL paymatrix-java-backend:${env.IMAGE_TAG}"
-            }
-        }
-
-        stage('GitOps Deployment Trigger') {
-            steps {
-                echo "[PayMatrix-Core] Updating k8s-manifests with image tag: ${env.IMAGE_TAG}"
-                /*
-                bat """
-                git config user.name "jenkins-bot"
-                git config user.email "jenkins@paymatrix.com"
-                git add k8s-manifests/
-                git commit -m "chore(gitops): bump image tag to ${env.IMAGE_TAG} [skip ci]"
-                git push origin main
-                """
-                */
+            parallel {
+                stage('Scan Java Image') {
+                    when {
+                        changeset "apps/java-backend/**"
+                    }
+                    steps {
+                        bat "trivy image --severity HIGH,CRITICAL paymatrix-java-backend:${env.IMAGE_TAG}"
+                    }
+                }
+                stage('Scan Go Image') {
+                    when {
+                        changeset "apps/go-microservice/**"
+                    }
+                    steps {
+                        bat "trivy image --severity HIGH,CRITICAL paymatrix-go-fraud:${env.IMAGE_TAG}"
+                    }
+                }
+                stage('Scan Node Image') {
+                    when {
+                        changeset "apps/node-frontend/**"
+                    }
+                    steps {
+                        bat "trivy image --severity HIGH,CRITICAL paymatrix-node-frontend:${env.IMAGE_TAG}"
+                    }
+                }
+                stage('Scan Python Image') {
+                    when {
+                        changeset "apps/python-analytics/**"
+                    }
+                    steps {
+                        bat "trivy image --severity HIGH,CRITICAL paymatrix-python-analytics:${env.IMAGE_TAG}"
+                    }
+                }
             }
         }
     }
@@ -105,10 +199,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "[PayMatrix-Core] Pipeline succeeded! Code quality and security checks passed."
+            echo "[PayMatrix] Build completed successfully. Unchanged services were skipped automatically."
         }
         failure {
-            echo "[PayMatrix-Core] Pipeline failed! Review logs above."
+            echo "[PayMatrix] Build failed! Review logs above."
         }
     }
 }
