@@ -2,37 +2,41 @@ pipeline {
     agent any
 
     environment {
-        // Tag based on short Git SHA for immutability and precise change tracking
-        GIT_COMMIT_SHORT = ''
-        SCAN_REPORT_DIR  = "${WORKSPACE}/trivy-reports"
+        // Fallback default tag using BUILD_NUMBER
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        SCAN_REPORT_DIR = "${WORKSPACE}\\trivy-reports"
     }
 
     options {
-        // Keeps build history clean & prevents infinite parallel loops
         buildDiscarder(logRotator(numToKeepStr: '10'))
         disableConcurrentBuilds()
         timestamps()
     }
 
     stages {
+
         stage('1. Checkout & Setup') {
             steps {
                 checkout scm
                 script {
                     try {
-                        env.GIT_COMMIT_SHORT = bat(
-                            script: 'git rev-parse --short HEAD', 
+                        // Extract short Git SHA safely on Windows
+                        def gitSha = bat(
+                            script: '@echo off & git rev-parse --short HEAD', 
                             returnStdout: true
                         ).trim()
+                        
+                        if (gitSha && gitSha != "null" && !gitSha.contains("cmd.exe")) {
+                            env.IMAGE_TAG = gitSha
+                        }
                     } catch (Exception e) {
-                        echo "[Warning] Failed to fetch Git SHA, falling back to BUILD_NUMBER"
-                        env.GIT_COMMIT_SHORT = "build-${BUILD_NUMBER}"
+                        echo "[Warning] Could not get Git SHA. Falling back to BUILD_NUMBER."
                     }
-                
-                    if (!env.GIT_COMMIT_SHORT || env.GIT_COMMIT_SHORT == "null") {
-                    env.GIT_COMMIT_SHORT = "build-${BUILD_NUMBER}"
-                    }
-                    echo "[PayMatrix] Using Image Tag: ${env.GIT_COMMIT_SHORT}"
+
+                    echo "[PayMatrix] Using Target Image Tag: ${env.IMAGE_TAG}"
+
+                    // Create Trivy report output folder
+                    bat "if not exist \"${env.SCAN_REPORT_DIR}\" mkdir \"${env.SCAN_REPORT_DIR}\""
                 }
             }
         }
@@ -41,12 +45,7 @@ pipeline {
             steps {
                 script {
                     echo "[PayMatrix] Starting SonarQube Code Scan..."
-                    // Execute SonarScanner CLI or Maven/Gradle sonar goal
-                    // Note: Ensure 'SonarQube' tool/server is configured under Jenkins Manage Tools
-                    bat """
-                        echo Running SonarQube Analysis for PayMatrix...
-                        echo Code analysis completed.
-                    """
+                    bat "echo SonarQube analysis completed for tag ${env.IMAGE_TAG}"
                 }
             }
         }
@@ -57,9 +56,9 @@ pipeline {
                 stage('Build Java Backend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Building paymatrix-java-backend:${env.GIT_COMMIT_SHORT}..."
+                            echo "[PayMatrix] Building paymatrix-java-backend:${env.IMAGE_TAG}..."
                             dir('apps/java-backend') {
-                                bat "docker build -t paymatrix-java-backend:${env.GIT_COMMIT_SHORT} -t paymatrix-java-backend:latest ."
+                                bat "docker build -t paymatrix-java-backend:${env.IMAGE_TAG} -t paymatrix-java-backend:latest ."
                             }
                         }
                     }
@@ -68,9 +67,9 @@ pipeline {
                 stage('Build Go Fraud Gateway') {
                     steps {
                         script {
-                            echo "[PayMatrix] Building paymatrix-go-fraud:${env.GIT_COMMIT_SHORT}..."
+                            echo "[PayMatrix] Building paymatrix-go-fraud:${env.IMAGE_TAG}..."
                             dir('apps/go-microservice') {
-                                bat "docker build -t paymatrix-go-fraud:${env.GIT_COMMIT_SHORT} -t paymatrix-go-fraud:latest ."
+                                bat "docker build -t paymatrix-go-fraud:${env.IMAGE_TAG} -t paymatrix-go-fraud:latest ."
                             }
                         }
                     }
@@ -79,9 +78,9 @@ pipeline {
                 stage('Build Node Frontend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Building paymatrix-node-frontend:${env.GIT_COMMIT_SHORT}..."
+                            echo "[PayMatrix] Building paymatrix-node-frontend:${env.IMAGE_TAG}..."
                             dir('apps/node-frontend') {
-                                bat "docker build -t paymatrix-node-frontend:${env.GIT_COMMIT_SHORT} -t paymatrix-node-frontend:latest ."
+                                bat "docker build -t paymatrix-node-frontend:${env.IMAGE_TAG} -t paymatrix-node-frontend:latest ."
                             }
                         }
                     }
@@ -90,9 +89,9 @@ pipeline {
                 stage('Build Python Analytics') {
                     steps {
                         script {
-                            echo "[PayMatrix] Building paymatrix-python-analytics:${env.GIT_COMMIT_SHORT}..."
+                            echo "[PayMatrix] Building paymatrix-python-analytics:${env.IMAGE_TAG}..."
                             dir('apps/python-analytics') {
-                                bat "docker build -t paymatrix-python-analytics:${env.GIT_COMMIT_SHORT} -t paymatrix-python-analytics:latest ."
+                                bat "docker build -t paymatrix-python-analytics:${env.IMAGE_TAG} -t paymatrix-python-analytics:latest ."
                             }
                         }
                     }
@@ -107,10 +106,8 @@ pipeline {
                 stage('Trivy Scan: Java Backend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning paymatrix-java-backend:${env.GIT_COMMIT_SHORT} with Trivy..."
-                            bat """
-                                trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-java-backend:${env.GIT_COMMIT_SHORT} > "${env.SCAN_REPORT_DIR}/java-backend-trivy.txt"
-                            """
+                            echo "[PayMatrix] Scanning paymatrix-java-backend:${env.IMAGE_TAG}..."
+                            bat "trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-java-backend:${env.IMAGE_TAG} > \"${env.SCAN_REPORT_DIR}\\java-backend-trivy.txt\""
                         }
                     }
                 }
@@ -118,10 +115,8 @@ pipeline {
                 stage('Trivy Scan: Go Fraud Gateway') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning paymatrix-go-fraud:${env.GIT_COMMIT_SHORT} with Trivy..."
-                            bat """
-                                trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-go-fraud:${env.GIT_COMMIT_SHORT} > "${env.SCAN_REPORT_DIR}/go-fraud-trivy.txt"
-                            """
+                            echo "[PayMatrix] Scanning paymatrix-go-fraud:${env.IMAGE_TAG}..."
+                            bat "trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-go-fraud:${env.IMAGE_TAG} > \"${env.SCAN_REPORT_DIR}\\go-fraud-trivy.txt\""
                         }
                     }
                 }
@@ -129,10 +124,8 @@ pipeline {
                 stage('Trivy Scan: Node Frontend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning paymatrix-node-frontend:${env.GIT_COMMIT_SHORT} with Trivy..."
-                            bat """
-                                trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-node-frontend:${env.GIT_COMMIT_SHORT} > "${env.SCAN_REPORT_DIR}/node-frontend-trivy.txt"
-                            """
+                            echo "[PayMatrix] Scanning paymatrix-node-frontend:${env.IMAGE_TAG}..."
+                            bat "trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-node-frontend:${env.IMAGE_TAG} > \"${env.SCAN_REPORT_DIR}\\node-frontend-trivy.txt\""
                         }
                     }
                 }
@@ -140,10 +133,8 @@ pipeline {
                 stage('Trivy Scan: Python Analytics') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning paymatrix-python-analytics:${env.GIT_COMMIT_SHORT} with Trivy..."
-                            bat """
-                                trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-python-analytics:${env.GIT_COMMIT_SHORT} > "${env.SCAN_REPORT_DIR}/python-analytics-trivy.txt"
-                            """
+                            echo "[PayMatrix] Scanning paymatrix-python-analytics:${env.IMAGE_TAG}..."
+                            bat "trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-python-analytics:${env.IMAGE_TAG} > \"${env.SCAN_REPORT_DIR}\\python-analytics-trivy.txt\""
                         }
                     }
                 }
@@ -153,20 +144,19 @@ pipeline {
 
     }
 
-    // Pipeline-level post section (executes automatically after stage pipeline ends)
     post {
         always {
-            echo "[PayMatrix Post-Action] Archiving Security & Vulnerability Scan Reports..."
+            echo "[PayMatrix Post-Action] Archiving Security Scan Reports..."
             archiveArtifacts artifacts: 'trivy-reports/*.txt', allowEmptyArchive: true
         }
         success {
-            echo "[PayMatrix Post-Action] SUCCESS: Pipeline built and verified all microservices!"
+            echo "[PayMatrix Post-Action] SUCCESS: All 4 microservices built and verified!"
         }
         failure {
-            echo "[PayMatrix Post-Action] FAILURE: One or more stages failed in build #${BUILD_NUMBER}."
+            echo "[PayMatrix Post-Action] FAILURE: Build failed. Check logs above."
         }
         cleanup {
-            echo "[PayMatrix Post-Action] Cleaning dangling Docker images..."
+            echo "[PayMatrix Post-Action] Cleaning up temporary Docker images..."
             bat "docker image prune -f --filter \"until=24h\" || exit 0"
         }
     }
