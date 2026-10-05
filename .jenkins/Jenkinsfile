@@ -15,21 +15,24 @@ pipeline {
     }
 
     stages {
-
         stage('1. Checkout & Setup') {
             steps {
                 checkout scm
                 script {
-                    // Extract short Git commit hash (Windows compatibility via `bat`)
-                    env.GIT_COMMIT_SHORT = bat(
-                        script: 'git rev-parse --short HEAD', 
-                        returnStdout: true
-                    ).trim()
-                    
-                    echo "[PayMatrix] Target Commit Tag: ${env.GIT_COMMIT_SHORT}"
-                    
-                    // Create folder for Trivy security reports
-                    bat "if not exist \"${env.SCAN_REPORT_DIR}\" mkdir \"${env.SCAN_REPORT_DIR}\""
+                    try {
+                        env.GIT_COMMIT_SHORT = bat(
+                            script: 'git rev-parse --short HEAD', 
+                            returnStdout: true
+                        ).trim()
+                    } catch (Exception e) {
+                        echo "[Warning] Failed to fetch Git SHA, falling back to BUILD_NUMBER"
+                        env.GIT_COMMIT_SHORT = "build-${BUILD_NUMBER}"
+                    }
+                
+                    if (!env.GIT_COMMIT_SHORT || env.GIT_COMMIT_SHORT == "null") {
+                    env.GIT_COMMIT_SHORT = "build-${BUILD_NUMBER}"
+                    }
+                    echo "[PayMatrix] Using Image Tag: ${env.GIT_COMMIT_SHORT}"
                 }
             }
         }
