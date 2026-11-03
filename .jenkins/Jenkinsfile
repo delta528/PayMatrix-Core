@@ -51,9 +51,7 @@ pipeline {
                             dir('apps/java-backend') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                                     withSonarQubeEnv('SonarQube') {
-                                        withMaven(maven: 'Maven 3') {
-                                            bat 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=paymatrix-java-backend -Dsonar.projectName="PayMatrix Java Backend" -Dsonar.host.url=http://127.0.0.1:9000 -Dsonar.token=%SONAR_TOKEN%'
-                                        }   
+                                        bat 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=paymatrix-java-backend -Dsonar.projectName="PayMatrix Java Backend" -Dsonar.host.url=http://127.0.0.1:9000 -Dsonar.token=%SONAR_TOKEN%'  
                                     }
                                 }
                             }
