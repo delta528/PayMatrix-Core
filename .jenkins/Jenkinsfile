@@ -234,21 +234,22 @@ pipeline {
 
                     }
                 }
+        }
 
-    post {
-        always {
-            echo "[PayMatrix Post-Action] Archiving Security Scan Reports..."
-            archiveArtifacts artifacts: 'trivy-reports/*.txt', allowEmptyArchive: true
-        }
-        success {
-            echo "[PayMatrix Post-Action] SUCCESS: All 4 microservices built and verified!"
-        }
-        failure {
-            echo "[PayMatrix Post-Action] FAILURE: Build failed. Check logs above."
-        }
-        cleanup {
-            echo "[PayMatrix Post-Action] Cleaning up temporary Docker images..."
-            bat "docker image prune -f --filter \"until=24h\" || exit 0"
+        post {
+            always {
+                echo "[PayMatrix Post-Action] Archiving Security Scan Reports..."
+                archiveArtifacts artifacts: 'trivy-reports/*.txt', allowEmptyArchive: true
+            }
+            success {
+                echo "[PayMatrix Post-Action] SUCCESS: All 4 microservices built and verified!"
+            }
+            failure {
+                echo "[PayMatrix Post-Action] FAILURE: Build failed. Check logs above."
+            }
+            cleanup {
+                echo "[PayMatrix Post-Action] Cleaning up temporary Docker images..."
+                bat "docker image prune -f --filter \"until=24h\" || exit 0"
+            }
         }
     }
-}
