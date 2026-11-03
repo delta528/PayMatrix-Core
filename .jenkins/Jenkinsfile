@@ -43,22 +43,31 @@ pipeline {
 
         stage('2. SonarQube Code Quality') {
             parallel {
-
                 stage('Sonar: Java Backend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning Java Backend..."
+                            echo "[PayMatrix] Scanning Java Backend via Docker..."
                             dir('apps/java-backend') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                                     withSonarQubeEnv('SonarQube') {
-                                        bat 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=paymatrix-java-backend -Dsonar.projectName="PayMatrix Java Backend" -Dsonar.host.url=http://127.0.0.1:9000 -Dsonar.token=%SONAR_TOKEN%'  
+                                        bat '''
+                                            docker run --rm ^
+                                            -v "%CD%:/usr/src/mymaven" ^
+                                            -v "%USERPROFILE%/.m2:/root/.m2" ^
+                                            -w /usr/src/mymaven ^
+                                            maven:3.9-eclipse-temurin-17 ^
+                                            mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ^
+                                            -Dsonar.projectKey=paymatrix-java-backend ^
+                                            -Dsonar.projectName="PayMatrix Java Backend" ^
+                                            -Dsonar.host.url="http://host.docker.internal:9000" ^
+                                            -Dsonar.token="%SONAR_TOKEN%"
+                                        '''
                                     }
                                 }
                             }
                         }
                     }
-                }
-            
+                }            
                 stage('Sonar: Go Fraud Gateway') {
                     steps {
                         script {
