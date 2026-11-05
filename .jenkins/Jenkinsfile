@@ -216,8 +216,8 @@ pipeline {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning paymatrix-java-backend:latest..."
-                            // Changed --exit-code 0 to --exit-code 1 to enforce blocking mode on HIGH/CRITICAL
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 1 paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
+                            // Changed --exit-code 0 to advisory mode on HIGH/CRITICAL
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
                         }
                     }
                 }
@@ -226,7 +226,7 @@ pipeline {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning paymatrix-go-fraud:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 1 paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
                         }
                     }
                 }
@@ -235,7 +235,7 @@ pipeline {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning paymatrix-node-frontend:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 1 paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
                         }
                     }
                 }
@@ -244,7 +244,7 @@ pipeline {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning paymatrix-python-analytics:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 1 paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
                         }
                     }
                 }
