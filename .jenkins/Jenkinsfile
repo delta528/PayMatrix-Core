@@ -5,6 +5,7 @@ pipeline {
         // Fallback default tag using BUILD_NUMBER
         IMAGE_TAG = "${BUILD_NUMBER}"
         SCAN_REPORT_DIR = "${WORKSPACE}\\trivy-reports"
+        SONARQUBE_SERVER = 'SonarQube' // Name configured in Jenkins Global Tool Configuration
     }
 
     options {
@@ -49,18 +50,18 @@ pipeline {
                             echo "[PayMatrix] Scanning Java Backend via Docker..."
                             dir('apps/java-backend') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    withSonarQubeEnv('SonarQube') {
+                                    withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
                                         bat '''
                                             docker run --rm ^
-                                              -v "%CD%:/usr/src/mymaven" ^
-                                              -v "%USERPROFILE%/.m2:/root/.m2" ^
-                                              -w /usr/src/mymaven ^
-                                              maven:3.9-eclipse-temurin-17 ^
-                                              mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ^
-                                              -Dsonar.projectKey=paymatrix-java-backend ^
-                                              -Dsonar.projectName="PayMatrix Java Backend" ^
-                                              -Dsonar.host.url="http://host.docker.internal:9000" ^
-                                              -Dsonar.token="%SONAR_TOKEN%"
+                                                -v "%CD%:/usr/src/mymaven" ^
+                                                -v "%USERPROFILE%/.m2:/root/.m2" ^
+                                                -w /usr/src/mymaven ^
+                                                maven:3.9-eclipse-temurin-17 ^
+                                                mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ^
+                                                -Dsonar.projectKey=paymatrix-java-backend ^
+                                                -Dsonar.projectName="PayMatrix Java Backend" ^
+                                                -Dsonar.host.url="http://host.docker.internal:9000" ^
+                                                -Dsonar.token="%SONAR_TOKEN%"
                                         '''
                                     }
                                 }
@@ -74,16 +75,16 @@ pipeline {
                             echo "[PayMatrix] Scanning Go Fraud Gateway..."
                             dir('apps/go-microservice') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    withSonarQubeEnv('SonarQube') {
+                                    withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
                                         bat '''
                                             docker run --rm ^
-                                              -v "%CD%:/usr/src" ^
-                                              -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
-                                              -e SONAR_TOKEN="%SONAR_TOKEN%" ^
-                                              sonarsource/sonar-scanner-cli ^
-                                              -Dsonar.projectKey=paymatrix-go-fraud ^
-                                              -Dsonar.projectName="PayMatrix Go Fraud Gateway" ^
-                                              -Dsonar.sources=.
+                                                -v "%CD%:/usr/src" ^
+                                                -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
+                                                -e SONAR_TOKEN="%SONAR_TOKEN%" ^
+                                                sonarsource/sonar-scanner-cli ^
+                                                -Dsonar.projectKey=paymatrix-go-fraud ^
+                                                -Dsonar.projectName="PayMatrix Go Fraud Gateway" ^
+                                                -Dsonar.sources=.
                                         '''
                                     }
                                 }
@@ -97,17 +98,17 @@ pipeline {
                             echo "[PayMatrix] Scanning Node Frontend..."
                             dir('apps/node-frontend') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    withSonarQubeEnv('SonarQube') {
+                                    withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
                                         bat '''
                                             docker run --rm ^
-                                              -v "%CD%:/usr/src" ^
-                                              -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
-                                              -e SONAR_TOKEN="%SONAR_TOKEN%" ^
-                                              sonarsource/sonar-scanner-cli ^
-                                              -Dsonar.projectKey=paymatrix-node-frontend ^
-                                              -Dsonar.projectName="PayMatrix Node Frontend" ^
-                                              -Dsonar.sources=. ^
-                                              -Dsonar.exclusions="**/node_modules/**,**/dist/**,**/build/**"
+                                                -v "%CD%:/usr/src" ^
+                                                -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
+                                                -e SONAR_TOKEN="%SONAR_TOKEN%" ^
+                                                sonarsource/sonar-scanner-cli ^
+                                                -Dsonar.projectKey=paymatrix-node-frontend ^
+                                                -Dsonar.projectName="PayMatrix Node Frontend" ^
+                                                -Dsonar.sources=. ^
+                                                -Dsonar.exclusions="**/node_modules/**,**/dist/**,**/build/**"
                                         '''
                                     }
                                 }
@@ -115,24 +116,24 @@ pipeline {
                         }
                     }
                 }
-                                    
+                                            
                 stage('Sonar: Python Analytics') {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning Python Analytics..."
                             dir('apps/python-analytics') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    withSonarQubeEnv('SonarQube') {
+                                    withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
                                         bat '''
                                             docker run --rm ^
-                                              -v "%CD%:/usr/src" ^
-                                              -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
-                                              -e SONAR_TOKEN="%SONAR_TOKEN%" ^
-                                              sonarsource/sonar-scanner-cli ^
-                                              -Dsonar.projectKey=paymatrix-python-analytics ^
-                                              -Dsonar.projectName="PayMatrix Python Analytics" ^
-                                              -Dsonar.sources=. ^
-                                              -Dsonar.exclusions="**/venv/**,**/__pycache__/**"
+                                                -v "%CD%:/usr/src" ^
+                                                -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
+                                                -e SONAR_TOKEN="%SONAR_TOKEN%" ^
+                                                sonarsource/sonar-scanner-cli ^
+                                                -Dsonar.projectKey=paymatrix-python-analytics ^
+                                                -Dsonar.projectName="PayMatrix Python Analytics" ^
+                                                -Dsonar.sources=. ^
+                                                -Dsonar.exclusions="**/venv/**,**/__pycache__/**"
                                         '''
                                     }
                                 }
@@ -141,6 +142,20 @@ pipeline {
                     }
                 }
 
+            }
+        }
+
+        // --- NEW QUALITY GATE CHECK STAGE ---
+        stage('2.1 SonarQube Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "Pipeline aborted due to SonarQube Quality Gate status: ${qg.status}"
+                        }
+                    }
+                }
             }
         }
 
@@ -193,6 +208,7 @@ pipeline {
 
             }
         }
+        
         stage('4. Trivy Security Scan') {
             parallel {
 
@@ -200,7 +216,8 @@ pipeline {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning paymatrix-java-backend:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
+                            // Changed --exit-code 0 to --exit-code 1 to enforce blocking mode on HIGH/CRITICAL
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 1 paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
                         }
                     }
                 }
@@ -209,7 +226,7 @@ pipeline {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning paymatrix-go-fraud:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 1 paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
                         }
                     }
                 }
@@ -218,7 +235,7 @@ pipeline {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning paymatrix-node-frontend:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 1 paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
                         }
                     }
                 }
@@ -227,7 +244,7 @@ pipeline {
                     steps {
                         script {
                             echo "[PayMatrix] Scanning paymatrix-python-analytics:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 1 paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
                         }
                     }
                 }
@@ -243,10 +260,10 @@ pipeline {
             archiveArtifacts artifacts: 'trivy-reports/*.txt', allowEmptyArchive: true
         }
         success {
-            echo "[PayMatrix Post-Action] SUCCESS: All 4 microservices built and verified!"
+            echo "[PayMatrix Post-Action] SUCCESS: All 4 microservices built, scanned, and verified!"
         }
         failure {
-            echo "[PayMatrix Post-Action] FAILURE: Build failed. Check logs above."
+            echo "[PayMatrix Post-Action] FAILURE: Build failed due to Quality Gate or Security violations."
         }
         cleanup {
             echo "[PayMatrix Post-Action] Cleaning up temporary Docker images..."
