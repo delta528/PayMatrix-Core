@@ -2,10 +2,9 @@ pipeline {
     agent any
 
     environment {
-        // Fallback default tag using BUILD_NUMBER
         IMAGE_TAG = "${BUILD_NUMBER}"
         SCAN_REPORT_DIR = "${WORKSPACE}\\trivy-reports"
-        SONARQUBE_SERVER = 'SonarQube' // Name configured in Jenkins Global Tool Configuration
+        SONARQUBE_SERVER = 'SonarQube'
     }
 
     options {
@@ -21,7 +20,6 @@ pipeline {
                 checkout scm
                 script {
                     try {
-                        // Extract short Git SHA safely on Windows
                         def gitSha = bat(
                             script: '@echo off & git rev-parse --short HEAD', 
                             returnStdout: true
@@ -35,8 +33,6 @@ pipeline {
                     }
 
                     echo "[PayMatrix] Using Target Image Tag: ${env.IMAGE_TAG}"
-
-                    // Create Trivy report output folder
                     bat "if not exist \"${env.SCAN_REPORT_DIR}\" mkdir \"${env.SCAN_REPORT_DIR}\""
                 }
             }
@@ -47,7 +43,6 @@ pipeline {
                 stage('Sonar: Java Backend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning Java Backend via Docker..."
                             dir('apps/java-backend') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                                     withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
@@ -72,7 +67,6 @@ pipeline {
                 stage('Sonar: Go Fraud Gateway') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning Go Fraud Gateway..."
                             dir('apps/go-microservice') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                                     withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
@@ -95,7 +89,6 @@ pipeline {
                 stage('Sonar: Node Frontend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning Node Frontend..."
                             dir('apps/node-frontend') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                                     withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
@@ -116,11 +109,9 @@ pipeline {
                         }
                     }
                 }
-                                            
                 stage('Sonar: Python Analytics') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning Python Analytics..."
                             dir('apps/python-analytics') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                                     withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
@@ -141,11 +132,9 @@ pipeline {
                         }
                     }
                 }
-
             }
         }
 
-        // --- NEW QUALITY GATE CHECK STAGE ---
         stage('2.1 SonarQube Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -159,151 +148,96 @@ pipeline {
             }
         }
 
-        stage('3. Build Docker Images') {
+        // --- MOVED UP: Build and push to ECR with Kaniko first ---
+        stage('3. Kaniko Build and Push to ECR') {
             parallel {
-
-                stage('Build Java Backend') {
+                stage('Push Go Microservice') {
                     steps {
-                        script {
-                            echo "[PayMatrix] Building paymatrix-java-backend:${env.IMAGE_TAG}..."
-                            dir('apps/java-backend') {
-                                bat "docker build -t paymatrix-java-backend:${env.IMAGE_TAG} -t paymatrix-java-backend:latest ."
-                            }
+                        container('kaniko') {
+                            sh '''
+                                /kaniko/executor \
+                                  --context="${WORKSPACE}/apps/go-microservice" \
+                                  --dockerfile="${WORKSPACE}/apps/go-microservice/Dockerfile" \
+                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-microservice:${env.IMAGE_TAG}" \
+                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-microservice:latest" \
+                                  --cache=true 
+                            '''
                         }
                     }
                 }
-
-                stage('Build Go Fraud Gateway') {
+                stage('Push Node Frontend') {
                     steps {
-                        script {
-                            echo "[PayMatrix] Building paymatrix-go-fraud:${env.IMAGE_TAG}..."
-                            dir('apps/go-microservice') {
-                                bat "docker build -t paymatrix-go-fraud:${env.IMAGE_TAG} -t paymatrix-go-fraud:latest ."
-                            }
+                        container('kaniko') {
+                            sh '''
+                                /kaniko/executor \
+                                  --context="${WORKSPACE}/apps/node-frontend" \
+                                  --dockerfile="${WORKSPACE}/apps/node-frontend/Dockerfile" \
+                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:${env.IMAGE_TAG}" \
+                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:latest" \
+                                  --cache=true 
+                            '''
                         }
                     }
                 }
-
-                stage('Build Node Frontend') {
+                stage('Push Java Backend') {
                     steps {
-                        script {
-                            echo "[PayMatrix] Building paymatrix-node-frontend:${env.IMAGE_TAG}..."
-                            dir('apps/node-frontend') {
-                                bat "docker build -t paymatrix-node-frontend:${env.IMAGE_TAG} -t paymatrix-node-frontend:latest ."
-                            }
+                        container('kaniko') {
+                            sh '''
+                                /kaniko/executor \
+                                  --context="${WORKSPACE}/apps/java-backend" \
+                                  --dockerfile="${WORKSPACE}/apps/java-backend/Dockerfile" \
+                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:${env.IMAGE_TAG}" \
+                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:latest" \
+                                  --cache=true 
+                            '''
                         }
                     }
                 }
-
-                stage('Build Python Analytics') {
+                stage('Push Python Analytics') {
                     steps {
-                        script {
-                            echo "[PayMatrix] Building paymatrix-python-analytics:${env.IMAGE_TAG}..."
-                            dir('apps/python-analytics') {
-                                bat "docker build -t paymatrix-python-analytics:${env.IMAGE_TAG} -t paymatrix-python-analytics:latest ."
-                            }
+                        container('kaniko') {
+                            sh '''
+                                /kaniko/executor \
+                                  --context="${WORKSPACE}/apps/python-analytics" \
+                                  --dockerfile="${WORKSPACE}/apps/python-analytics/Dockerfile" \
+                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:${env.IMAGE_TAG}" \
+                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:latest" \
+                                  --cache=true 
+                            '''
                         }
                     }
                 }
-
             }
         }
-        
+
+        // --- MOVED DOWN: Scan images directly from ECR after successful push ---
         stage('4. Trivy Security Scan') {
             parallel {
-
                 stage('Trivy Scan: Java Backend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning paymatrix-java-backend:latest..."
-                            // Changed --exit-code 0 to advisory mode on HIGH/CRITICAL
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
                         }
                     }
                 }
-
-                stage('Trivy Scan: Go Fraud Gateway') {
+                stage('Trivy Scan: Go Microservice') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning paymatrix-go-fraud:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-microservice:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
                         }
                     }
                 }
-
                 stage('Trivy Scan: Node Frontend') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning paymatrix-node-frontend:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
                         }
                     }
                 }
-
                 stage('Trivy Scan: Python Analytics') {
                     steps {
                         script {
-                            echo "[PayMatrix] Scanning paymatrix-python-analytics:latest..."
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
-                        }
-                    }
-                }
-
-            }
-        }
-
-        stage('5. Kaniko Build and Push') {
-            parallel {
-
-                stage('Build and Push Go Microservice with Kaniko') {
-                    steps {
-                        container('kaniko') {
-                            bat '''
-                                /kaniko/executor \
-                                --context=dir://apps/go-microservice \
-                                --dockerfile=apps/go-microservice/Dockerfile \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-microservice:latest" \
-                                --cache=true 
-                            '''
-                        }
-                    }
-                }
-                stage('Build and Push Node Frontend with Kaniko') {
-                    steps {
-                        container('kaniko') {
-                            bat '''
-                                /kaniko/executor \
-                                --context=dir://apps/node-frontend \
-                                --dockerfile=apps/node-frontend/Dockerfile \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:latest" \
-                                --cache=true 
-                            '''
-                        }
-                    }
-                }
-                stage('Build and Push Java Backend with Kaniko') {
-                    steps {
-                        container('kaniko') {
-                            bat '''
-                                /kaniko/executor \
-                                --context=dir://apps/java-backend \
-                                --dockerfile=apps/java-backend/Dockerfile \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:latest" \
-                                --cache=true 
-                            '''
-                        }
-                    }
-                }
-                stage('Build and Push Python Analytics with Kaniko') {
-                    steps {
-                        container('kaniko') {
-                            bat '''
-                                /kaniko/executor \
-                                --context=dir://apps/python-analytics \
-                                --dockerfile=apps/python-analytics/Dockerfile \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:latest" \
-                                --cache=true 
-                            '''
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
                         }
                     }
                 }
@@ -317,14 +251,14 @@ pipeline {
             archiveArtifacts artifacts: 'trivy-reports/*.txt', allowEmptyArchive: true
         }
         success {
-            echo "[PayMatrix Post-Action] SUCCESS: All 4 microservices built, scanned, and verified!"
+            echo "[PayMatrix Post-Action] SUCCESS: All 4 microservices built, pushed to ECR via Kaniko, and scanned!"
         }
         failure {
             echo "[PayMatrix Post-Action] FAILURE: Build failed due to Quality Gate or Security violations."
         }
         cleanup {
-            echo "[PayMatrix Post-Action] Cleaning up temporary Docker images..."
-            bat "docker image prune -f --filter \"until=24h\" || exit 0"
+            echo "[PayMatrix Post-Action] Cleaning up temporary workspace files..."
+            cleanWs notFailBuild: true
         }
     }
 }
