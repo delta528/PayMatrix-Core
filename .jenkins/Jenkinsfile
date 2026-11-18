@@ -252,6 +252,63 @@ pipeline {
             }
         }
 
+        stage('5. Kaniko Build and Push') {
+            parallel {
+
+                stage('Build and Push Go Microservice with Kaniko') {
+                    steps {
+                        container('kaniko') {
+                            bat '''
+                                /kaniko/executor \
+                                --context=dir://apps/go-microservice \
+                                --dockerfile=apps/go-microservice/Dockerfile \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-microservice:latest" \
+                                --cache=true 
+                            '''
+                        }
+                    }
+                }
+                stage('Build and Push Node Frontend with Kaniko') {
+                    steps {
+                        container('kaniko') {
+                            bat '''
+                                /kaniko/executor \
+                                --context=dir://apps/node-frontend \
+                                --dockerfile=apps/node-frontend/Dockerfile \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:latest" \
+                                --cache=true 
+                            '''
+                        }
+                    }
+                }
+                stage('Build and Push Java Backend with Kaniko') {
+                    steps {
+                        container('kaniko') {
+                            bat '''
+                                /kaniko/executor \
+                                --context=dir://apps/java-backend \
+                                --dockerfile=apps/java-backend/Dockerfile \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:latest" \
+                                --cache=true 
+                            '''
+                        }
+                    }
+                }
+                stage('Build and Push Python Analytics with Kaniko') {
+                    steps {
+                        container('kaniko') {
+                            bat '''
+                                /kaniko/executor \
+                                --context=dir://apps/python-analytics \
+                                --dockerfile=apps/python-analytics/Dockerfile \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:latest" \
+                                --cache=true 
+                            '''
+                        }
+                    }
+                }
+            }
+        }
     }
 
     post {
