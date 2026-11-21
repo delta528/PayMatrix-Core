@@ -126,7 +126,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('2.1 SonarQube Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -148,11 +148,11 @@ pipeline {
                         container('kaniko') {
                             sh '''
                                 /kaniko/executor \
-                                  --context="${WORKSPACE}/apps/go-microservice" \
-                                  --dockerfile="${WORKSPACE}/apps/go-microservice/Dockerfile" \
-                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-microservice:${env.IMAGE_TAG}" \
-                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-microservice:latest" \
-                                  --cache=true 
+                                --context="${WORKSPACE}/apps/go-microservice" \
+                                --dockerfile="${WORKSPACE}/apps/go-microservice/Dockerfile" \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-fraud:${env.IMAGE_TAG}" \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-fraud:latest" \
+                                --cache=true 
                             '''
                         }
                     }
@@ -162,11 +162,11 @@ pipeline {
                         container('kaniko') {
                             sh '''
                                 /kaniko/executor \
-                                  --context="${WORKSPACE}/apps/node-frontend" \
-                                  --dockerfile="${WORKSPACE}/apps/node-frontend/Dockerfile" \
-                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:${env.IMAGE_TAG}" \
-                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:latest" \
-                                  --cache=true 
+                                --context="${WORKSPACE}/apps/node-frontend" \
+                                --dockerfile="${WORKSPACE}/apps/node-frontend/Dockerfile" \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:${env.IMAGE_TAG}" \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:latest" \
+                                --cache=true 
                             '''
                         }
                     }
@@ -176,11 +176,11 @@ pipeline {
                         container('kaniko') {
                             sh '''
                                 /kaniko/executor \
-                                  --context="${WORKSPACE}/apps/java-backend" \
-                                  --dockerfile="${WORKSPACE}/apps/java-backend/Dockerfile" \
-                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:${env.IMAGE_TAG}" \
-                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:latest" \
-                                  --cache=true 
+                                --context="${WORKSPACE}/apps/java-backend" \
+                                --dockerfile="${WORKSPACE}/apps/java-backend/Dockerfile" \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:${env.IMAGE_TAG}" \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:latest" \
+                                --cache=true 
                             '''
                         }
                     }
@@ -190,11 +190,11 @@ pipeline {
                         container('kaniko') {
                             sh '''
                                 /kaniko/executor \
-                                  --context="${WORKSPACE}/apps/python-analytics" \
-                                  --dockerfile="${WORKSPACE}/apps/python-analytics/Dockerfile" \
-                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:${env.IMAGE_TAG}" \
-                                  --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:latest" \
-                                  --cache=true 
+                                --context="${WORKSPACE}/apps/python-analytics" \
+                                --dockerfile="${WORKSPACE}/apps/python-analytics/Dockerfile" \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:${env.IMAGE_TAG}" \
+                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:latest" \
+                                --cache=true 
                             '''
                         }
                     }
@@ -215,7 +215,7 @@ pipeline {
                 stage('Trivy Scan: Go Microservice') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-microservice:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
                         }
                     }
                 }
