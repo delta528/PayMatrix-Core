@@ -2,7 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        AWS_REGION = 'us-west-2'
+        ECR_REGISTRY = '074926209680.dkr.ecr.us-west-2.amazonaws.com'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
         SCAN_REPORT_DIR = "${WORKSPACE}\\trivy-reports"
         SONARQUBE_SERVER = 'SonarQube'
     }
@@ -32,7 +34,7 @@ pipeline {
                         echo "[Warning] Could not get Git SHA. Falling back to BUILD_NUMBER."
                     }
 
-                    echo "[PayMatrix] Using Target Image Tag: ${env.IMAGE_TAG}"
+                    echo "[PayMatrix Production] Target Image Tag: ${env.IMAGE_TAG}"
                     bat "if not exist \"${env.SCAN_REPORT_DIR}\" mkdir \"${env.SCAN_REPORT_DIR}\""
                 }
             }
@@ -140,96 +142,94 @@ pipeline {
             }
         }
 
-        // --- MOVED UP: Build and push to ECR with Kaniko first ---
-        stage('3. Kaniko Build and Push to ECR') {
-            parallel {
-                stage('Push Go Microservice') {
-                    steps {
-                        container('kaniko') {
-                            sh '''
-                                /kaniko/executor \
-                                --context="${WORKSPACE}/apps/go-microservice" \
-                                --dockerfile="${WORKSPACE}/apps/go-microservice/Dockerfile" \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-fraud:${env.IMAGE_TAG}" \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-fraud:latest" \
-                                --cache=true 
-                            '''
-                        }
-                    }
-                }
-                stage('Push Node Frontend') {
-                    steps {
-                        container('kaniko') {
-                            sh '''
-                                /kaniko/executor \
-                                --context="${WORKSPACE}/apps/node-frontend" \
-                                --dockerfile="${WORKSPACE}/apps/node-frontend/Dockerfile" \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:${env.IMAGE_TAG}" \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:latest" \
-                                --cache=true 
-                            '''
-                        }
-                    }
-                }
-                stage('Push Java Backend') {
-                    steps {
-                        container('kaniko') {
-                            sh '''
-                                /kaniko/executor \
-                                --context="${WORKSPACE}/apps/java-backend" \
-                                --dockerfile="${WORKSPACE}/apps/java-backend/Dockerfile" \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:${env.IMAGE_TAG}" \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:latest" \
-                                --cache=true 
-                            '''
-                        }
-                    }
-                }
-                stage('Push Python Analytics') {
-                    steps {
-                        container('kaniko') {
-                            sh '''
-                                /kaniko/executor \
-                                --context="${WORKSPACE}/apps/python-analytics" \
-                                --dockerfile="${WORKSPACE}/apps/python-analytics/Dockerfile" \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:${env.IMAGE_TAG}" \
-                                --destination="074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:latest" \
-                                --cache=true 
-                            '''
-                        }
+        stage('3. Enterprise Build & Push to ECR') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    script {
+                        echo "[PayMatrix Production] Authenticating dynamically with AWS ECR..."
+                        bat "aws ecr get-login-password --region ${env.AWS_REGION} | docker login --username AWS --password-stdin ${env.ECR_REGISTRY}"
+
+                        parallel(
+                            'Push Go Microservice': {
+                                dir('apps/go-microservice') {
+                                    bat '''
+                                        docker build -t paymatrix-go-fraud:${env.IMAGE_TAG} -t paymatrix-go-fraud:latest .
+                                        docker tag paymatrix-go-fraud:latest ${env.ECR_REGISTRY}/paymatrix-go-fraud:${env.IMAGE_TAG}
+                                        docker tag paymatrix-go-fraud:latest ${env.ECR_REGISTRY}/paymatrix-go-fraud:latest
+                                        docker push ${env.ECR_REGISTRY}/paymatrix-go-fraud:${env.IMAGE_TAG}
+                                        docker push ${env.ECR_REGISTRY}/paymatrix-go-fraud:latest
+                                    '''
+                                }
+                            },
+                            'Push Node Frontend': {
+                                dir('apps/node-frontend') {
+                                    bat '''
+                                        docker build -t paymatrix-node-frontend:${env.IMAGE_TAG} -t paymatrix-node-frontend:latest .
+                                        docker tag paymatrix-node-frontend:latest ${env.ECR_REGISTRY}/paymatrix-node-frontend:${env.IMAGE_TAG}
+                                        docker tag paymatrix-node-frontend:latest ${env.ECR_REGISTRY}/paymatrix-node-frontend:latest
+                                        docker push ${env.ECR_REGISTRY}/paymatrix-node-frontend:${env.IMAGE_TAG}
+                                        docker push ${env.ECR_REGISTRY}/paymatrix-node-frontend:latest
+                                    '''
+                                }
+                            },
+                            'Push Java Backend': {
+                                dir('apps/java-backend') {
+                                    bat '''
+                                        docker build -t paymatrix-java-backend:${env.IMAGE_TAG} -t paymatrix-java-backend:latest .
+                                        docker tag paymatrix-java-backend:latest ${env.ECR_REGISTRY}/paymatrix-java-backend:${env.IMAGE_TAG}
+                                        docker tag paymatrix-java-backend:latest ${env.ECR_REGISTRY}/paymatrix-java-backend:latest
+                                        docker push ${env.ECR_REGISTRY}/paymatrix-java-backend:${env.IMAGE_TAG}
+                                        docker push ${env.ECR_REGISTRY}/paymatrix-java-backend:latest
+                                    '''
+                                }
+                            },
+                            'Push Python Analytics': {
+                                dir('apps/python-analytics') {
+                                    bat '''
+                                        docker build -t paymatrix-python-analytics:${env.IMAGE_TAG} -t paymatrix-python-analytics:latest .
+                                        docker tag paymatrix-python-analytics:latest ${env.ECR_REGISTRY}/paymatrix-python-analytics:${env.IMAGE_TAG}
+                                        docker tag paymatrix-python-analytics:latest ${env.ECR_REGISTRY}/paymatrix-python-analytics:latest
+                                        docker push ${env.ECR_REGISTRY}/paymatrix-python-analytics:${env.IMAGE_TAG}
+                                        docker push ${env.ECR_REGISTRY}/paymatrix-python-analytics:latest
+                                    '''
+                                }
+                            }
+                        )
                     }
                 }
             }
         }
 
-        // --- MOVED DOWN: Scan images directly from ECR after successful pushed ---
         stage('4. Trivy Security Scan') {
             parallel {
                 stage('Trivy Scan: Java Backend') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.ECR_REGISTRY}/paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
                         }
                     }
                 }
                 stage('Trivy Scan: Go Microservice') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.ECR_REGISTRY}/paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
                         }
                     }
                 }
                 stage('Trivy Scan: Node Frontend') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.ECR_REGISTRY}/paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
                         }
                     }
                 }
                 stage('Trivy Scan: Python Analytics') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 074926209680.dkr.ecr.us-west-2.amazonaws.com/paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
+                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.ECR_REGISTRY}/paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
                         }
                     }
                 }
@@ -243,14 +243,15 @@ pipeline {
             archiveArtifacts artifacts: 'trivy-reports/*.txt', allowEmptyArchive: true
         }
         success {
-            echo "[PayMatrix Post-Action] SUCCESS: All 4 microservices built, pushed to ECR via Kaniko, and scanned!"
+            echo "[PayMatrix Post-Action] SUCCESS: Production pipeline complete. Images pushed and scanned successfully!"
         }
         failure {
-            echo "[PayMatrix Post-Action] FAILURE: Build failed due to Quality Gate or Security violations."
+            echo "[PayMatrix Post-Action] FAILURE: Pipeline failed during quality gate, push, or scan."
         }
         cleanup {
-            echo "[PayMatrix Post-Action] Cleaning up temporary workspace files..."
+            echo "[PayMatrix Post-Action] Cleaning up workspace and local container cache..."
             cleanWs notFailBuild: true
+            bat "docker image prune -f || exit 0"
         }
     }
 }
