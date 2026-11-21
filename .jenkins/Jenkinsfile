@@ -43,22 +43,20 @@ pipeline {
                 stage('Sonar: Java Backend') {
                     steps {
                         script {
-                            dir('apps/java-backend') {
-                                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
-                                        bat '''
-                                            docker run --rm ^
-                                                -v "%CD%:/usr/src/mymaven" ^
-                                                -v "%USERPROFILE%/.m2:/root/.m2" ^
-                                                -w /usr/src/mymaven ^
-                                                maven:3.9-eclipse-temurin-17 ^
-                                                mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ^
-                                                -Dsonar.projectKey=paymatrix-java-backend ^
-                                                -Dsonar.projectName="PayMatrix Java Backend" ^
-                                                -Dsonar.host.url="http://host.docker.internal:9000" ^
-                                                -Dsonar.token="%SONAR_TOKEN%"
-                                        '''
-                                    }
+                            withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                                withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
+                                    bat '''
+                                        docker run --rm ^
+                                            -v "%WORKSPACE%\\apps\\java-backend:/usr/src/mymaven" ^
+                                            -v "%USERPROFILE%\\.m2:/root/.m2" ^
+                                            -w /usr/src/mymaven ^
+                                            maven:3.9-eclipse-temurin-17 ^
+                                            mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ^
+                                            -Dsonar.projectKey=paymatrix-java-backend ^
+                                            -Dsonar.projectName="PayMatrix Java Backend" ^
+                                            -Dsonar.host.url="http://host.docker.internal:9000" ^
+                                            -Dsonar.token="%SONAR_TOKEN%"
+                                    '''
                                 }
                             }
                         }
@@ -67,20 +65,18 @@ pipeline {
                 stage('Sonar: Go Fraud Gateway') {
                     steps {
                         script {
-                            dir('apps/go-microservice') {
-                                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
-                                        bat '''
-                                            docker run --rm ^
-                                                -v "%CD%:/usr/src" ^
-                                                -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
-                                                -e SONAR_TOKEN="%SONAR_TOKEN%" ^
-                                                sonarsource/sonar-scanner-cli ^
-                                                -Dsonar.projectKey=paymatrix-go-fraud ^
-                                                -Dsonar.projectName="PayMatrix Go Fraud Gateway" ^
-                                                -Dsonar.sources=.
-                                        '''
-                                    }
+                            withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                                withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
+                                    bat '''
+                                        docker run --rm ^
+                                            -v "%WORKSPACE%\\apps\\go-microservice:/usr/src" ^
+                                            -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
+                                            -e SONAR_TOKEN="%SONAR_TOKEN%" ^
+                                            sonarsource/sonar-scanner-cli ^
+                                            -Dsonar.projectKey=paymatrix-go-fraud ^
+                                            -Dsonar.projectName="PayMatrix Go Fraud Gateway" ^
+                                            -Dsonar.sources=.
+                                    '''
                                 }
                             }
                         }
@@ -89,21 +85,19 @@ pipeline {
                 stage('Sonar: Node Frontend') {
                     steps {
                         script {
-                            dir('apps/node-frontend') {
-                                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
-                                        bat '''
-                                            docker run --rm ^
-                                                -v "%CD%:/usr/src" ^
-                                                -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
-                                                -e SONAR_TOKEN="%SONAR_TOKEN%" ^
-                                                sonarsource/sonar-scanner-cli ^
-                                                -Dsonar.projectKey=paymatrix-node-frontend ^
-                                                -Dsonar.projectName="PayMatrix Node Frontend" ^
-                                                -Dsonar.sources=. ^
-                                                -Dsonar.exclusions="**/node_modules/**,**/dist/**,**/build/**"
-                                        '''
-                                    }
+                            withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                                withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
+                                    bat '''
+                                        docker run --rm ^
+                                            -v "%WORKSPACE%\\apps\\node-frontend:/usr/src" ^
+                                            -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
+                                            -e SONAR_TOKEN="%SONAR_TOKEN%" ^
+                                            sonarsource/sonar-scanner-cli ^
+                                            -Dsonar.projectKey=paymatrix-node-frontend ^
+                                            -Dsonar.projectName="PayMatrix Node Frontend" ^
+                                            -Dsonar.sources=. ^
+                                            -Dsonar.exclusions="**/node_modules/**,**/dist/**,**/build/**"
+                                    '''
                                 }
                             }
                         }
@@ -112,21 +106,19 @@ pipeline {
                 stage('Sonar: Python Analytics') {
                     steps {
                         script {
-                            dir('apps/python-analytics') {
-                                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
-                                        bat '''
-                                            docker run --rm ^
-                                                -v "%CD%:/usr/src" ^
-                                                -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
-                                                -e SONAR_TOKEN="%SONAR_TOKEN%" ^
-                                                sonarsource/sonar-scanner-cli ^
-                                                -Dsonar.projectKey=paymatrix-python-analytics ^
-                                                -Dsonar.projectName="PayMatrix Python Analytics" ^
-                                                -Dsonar.sources=. ^
-                                                -Dsonar.exclusions="**/venv/**,**/__pycache__/**"
-                                        '''
-                                    }
+                            withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                                withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
+                                    bat '''
+                                        docker run --rm ^
+                                            -v "%WORKSPACE%\\apps\\python-analytics:/usr/src" ^
+                                            -e SONAR_HOST_URL="http://host.docker.internal:9000" ^
+                                            -e SONAR_TOKEN="%SONAR_TOKEN%" ^
+                                            sonarsource/sonar-scanner-cli ^
+                                            -Dsonar.projectKey=paymatrix-python-analytics ^
+                                            -Dsonar.projectName="PayMatrix Python Analytics" ^
+                                            -Dsonar.sources=. ^
+                                            -Dsonar.exclusions="**/venv/**,**/__pycache__/**"
+                                    '''
                                 }
                             }
                         }
@@ -134,7 +126,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('2.1 SonarQube Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
