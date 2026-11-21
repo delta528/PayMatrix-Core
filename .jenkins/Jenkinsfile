@@ -150,51 +150,51 @@ pipeline {
                 ]) {
                     script {
                         echo "[PayMatrix Production] Authenticating dynamically with AWS ECR..."
-                        bat "aws ecr get-login-password --region ${env.AWS_REGION} | docker login --username AWS --password-stdin ${env.ECR_REGISTRY}"
+                        bat "aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %ECR_REGISTRY%"
 
                         parallel(
                             'Push Go Microservice': {
                                 dir('apps/go-microservice') {
-                                    bat '''
+                                    bat """
                                         docker build -t paymatrix-go-fraud:${env.IMAGE_TAG} -t paymatrix-go-fraud:latest .
                                         docker tag paymatrix-go-fraud:latest ${env.ECR_REGISTRY}/paymatrix-go-fraud:${env.IMAGE_TAG}
                                         docker tag paymatrix-go-fraud:latest ${env.ECR_REGISTRY}/paymatrix-go-fraud:latest
                                         docker push ${env.ECR_REGISTRY}/paymatrix-go-fraud:${env.IMAGE_TAG}
                                         docker push ${env.ECR_REGISTRY}/paymatrix-go-fraud:latest
-                                    '''
+                                    """
                                 }
                             },
                             'Push Node Frontend': {
                                 dir('apps/node-frontend') {
-                                    bat '''
+                                    bat """
                                         docker build -t paymatrix-node-frontend:${env.IMAGE_TAG} -t paymatrix-node-frontend:latest .
                                         docker tag paymatrix-node-frontend:latest ${env.ECR_REGISTRY}/paymatrix-node-frontend:${env.IMAGE_TAG}
                                         docker tag paymatrix-node-frontend:latest ${env.ECR_REGISTRY}/paymatrix-node-frontend:latest
                                         docker push ${env.ECR_REGISTRY}/paymatrix-node-frontend:${env.IMAGE_TAG}
                                         docker push ${env.ECR_REGISTRY}/paymatrix-node-frontend:latest
-                                    '''
+                                    """
                                 }
                             },
                             'Push Java Backend': {
                                 dir('apps/java-backend') {
-                                    bat '''
+                                    bat """
                                         docker build -t paymatrix-java-backend:${env.IMAGE_TAG} -t paymatrix-java-backend:latest .
                                         docker tag paymatrix-java-backend:latest ${env.ECR_REGISTRY}/paymatrix-java-backend:${env.IMAGE_TAG}
                                         docker tag paymatrix-java-backend:latest ${env.ECR_REGISTRY}/paymatrix-java-backend:latest
                                         docker push ${env.ECR_REGISTRY}/paymatrix-java-backend:${env.IMAGE_TAG}
                                         docker push ${env.ECR_REGISTRY}/paymatrix-java-backend:latest
-                                    '''
+                                    """
                                 }
                             },
                             'Push Python Analytics': {
                                 dir('apps/python-analytics') {
-                                    bat '''
+                                    bat """
                                         docker build -t paymatrix-python-analytics:${env.IMAGE_TAG} -t paymatrix-python-analytics:latest .
                                         docker tag paymatrix-python-analytics:latest ${env.ECR_REGISTRY}/paymatrix-python-analytics:${env.IMAGE_TAG}
                                         docker tag paymatrix-python-analytics:latest ${env.ECR_REGISTRY}/paymatrix-python-analytics:latest
                                         docker push ${env.ECR_REGISTRY}/paymatrix-python-analytics:${env.IMAGE_TAG}
                                         docker push ${env.ECR_REGISTRY}/paymatrix-python-analytics:latest
-                                    '''
+                                    """
                                 }
                             }
                         )
