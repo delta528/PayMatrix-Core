@@ -208,34 +208,33 @@ pipeline {
                 stage('Trivy Scan: Java Backend') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.ECR_REGISTRY}/paymatrix-java-backend:latest > \"%WORKSPACE%\\trivy-reports\\java-backend-trivy.txt\""
+                            bat "trivy image --severity HIGH,CRITICAL --exit-code 0 --format table ${env.ECR_REGISTRY}/paymatrix-java-backend:latest"
                         }
                     }
                 }
                 stage('Trivy Scan: Go Microservice') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.ECR_REGISTRY}/paymatrix-go-fraud:latest > \"%WORKSPACE%\\trivy-reports\\go-fraud-trivy.txt\""
+                            bat "trivy image --severity HIGH,CRITICAL --exit-code 0 --format table ${env.ECR_REGISTRY}/paymatrix-go-fraud:latest"
                         }
                     }
                 }
                 stage('Trivy Scan: Node Frontend') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.ECR_REGISTRY}/paymatrix-node-frontend:latest > \"%WORKSPACE%\\trivy-reports\\node-frontend-trivy.txt\""
+                            bat "trivy image --severity HIGH,CRITICAL --exit-code 0 --format table ${env.ECR_REGISTRY}/paymatrix-node-frontend:latest"
                         }
                     }
                 }
                 stage('Trivy Scan: Python Analytics') {
                     steps {
                         script {
-                            bat "cmd /c trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.ECR_REGISTRY}/paymatrix-python-analytics:latest > \"%WORKSPACE%\\trivy-reports\\python-analytics-trivy.txt\""
+                            bat "trivy image --severity HIGH,CRITICAL --exit-code 0 --format table ${env.ECR_REGISTRY}/paymatrix-python-analytics:latest"
                         }
                     }
                 }
             }
         }
-    }
 
     post {
         always {
