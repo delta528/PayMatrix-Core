@@ -210,7 +210,7 @@ pipeline {
             }
         }
 
-        // --- MOVED DOWN: Scan images directly from ECR after successful push ---
+        // --- MOVED DOWN: Scan images directly from ECR after successful pushed ---
         stage('4. Trivy Security Scan') {
             parallel {
                 stage('Trivy Scan: Java Backend') {
